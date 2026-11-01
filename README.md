@@ -39,6 +39,7 @@ data/
   expected/       gabaritos oficiais (respostas1 e respostas2)
   referencia/     saída da versão força bruta, usada como referência
 output/           resultados gerados
+visualizacao/     mapa interativo dos encontros (extra, não faz parte do algoritmo)
 ```
 
 ## Lógica
@@ -104,6 +105,22 @@ Tempos medidos na minha máquina e podem variar em outro ambiente.
 ## Próximo passo possível
 
 Depois da otimização, o tempo de detecção ficou praticamente zero e quase todo o tempo restante é leitura e quebra das linhas do arquivo. O próximo ganho viria de substituir o `readline` por uma leitura manual em blocos maiores, tratando as linhas que ficam cortadas entre um bloco e outro.
+
+## Extra: visualização no mapa
+
+A pasta `visualizacao/` tem uma página que mostra os encontros detectados num mapa, com cor por tipo, contagem, e uma lista lateral que leva até cada encontro com o popup de ids, horário e distância.
+
+Ela é separada do algoritmo e não é necessária para gerar os resultados. Usa o Leaflet carregado por CDN, então também não precisa instalar nada.
+
+Para abrir, rode na raiz do projeto (depois de gerar os outputs):
+
+```bash
+npx serve .
+```
+
+e acesse `http://localhost:3000/visualizacao/`. O servidor é necessário porque o navegador bloqueia a leitura de arquivos locais pela página.
+
+Alguns encontros aparecem no oceano. Isso acontece porque os dados do desafio são fictícios, e as coordenadas parecem ter sido geradas dentro de uma área retangular sobre a América do Sul que inclui parte do mar.
 
 ## Uso de IA
 
