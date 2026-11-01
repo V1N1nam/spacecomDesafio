@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Encontros detectados</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { margin: 0; display: flex; height: 100vh; font-family: system-ui, sans-serif; }
+    #painel { width: 300px; padding: 16px; overflow-y: auto; border-right: 1px solid #ddd; box-sizing: border-box; }
+    #mapa { flex: 1; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    select { width: 100%; padding: 6px; margin-bottom: 12px; }
+    .legenda span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .item { padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
+    .item:hover { background: #f3f3f3; }
+  </style>
+</head>
+<body>
+  <div id="painel">
+    <h1>Encontros detectados</h1>
+    <select id="dataset"></select>
+    <div id="legenda" class="legenda"></div>
+    <div id="lista"></div>
+  </div>
+  <div id="mapa"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const CORES = { protetiva: '#d62728', faccao: '#ff7f0e', generico: '#1f77b4' };
+
+    const mapa = L.map('mapa').setView([-15, -55], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(mapa);
+
+    const camada = L.layerGroup().addTo(mapa);
+    const select = document.getElementById('dataset');
+
+    for (let n = 1; n <= 7; n++) {
+      select.add(new Option(`Dataset ${n}`, n));
+    }
+    select.addEventListener('change', () => carregar(select.value));
+
+    async function carregar(n) {
+      const resposta = await fetch(`../output/resultado${n}.json`);
+      const encontros = await resposta.json();
+
+      camada.clearLayers();
+      const lista = document.getElementById('lista');
+      lista.innerHTML = '';
+      const contagem = { protetiva: 0, faccao: 0, generico: 0 };
+      const limites = [];
+
+      for (const e of encontros) {
+        contagem[e.tipo]++;
+        const cor = CORES[e.tipo];
+        const [id1, id2] = e.monitoradosEncontro;
+        const p1 = [e.posicoes[id1].lat, e.posicoes[id1].lon];
+        const p2 = [e.posicoes[id2].lat, e.posicoes[id2].lon];
+
+        const texto = `<b>${e.tipo}</b><br>
+          Monitorados: ${id1} e ${id2}<br>
+          ${e.timestamp}<br>
+          Distância: ${e.distanciaMetros.toFixed(2)} m`;
+
+        const marcador = L.circleMarker(p1, { radius: 6, color: cor, fillOpacity: 0.8 }).bindPopup(texto).addTo(camada);
+        L.circleMarker(p2, { radius: 6, color: cor, fillOpacity: 0.8 }).bindPopup(texto).addTo(camada);
+        L.polyline([p1, p2], { color: cor }).addTo(camada);
+        limites.push(p1, p2);
+
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.innerHTML = `<span style="color:${cor}">●</span> ${e.tipo} · ${id1} e ${id2}<br>
+          <small>${e.timestamp} · ${e.distanciaMetros.toFixed(1)} m</small>`;
+        item.addEventListener('click', () => {
+          mapa.fitBounds([p1, p2], { maxZoom: 18, animate: false });
+          marcador.openPopup();
+        });
+        lista.appendChild(item);
+      }
+
+      document.getElementById('legenda').innerHTML = Object.keys(CORES)
+        .map(t => `<div><span style="background:${CORES[t]}"></span>${t}: ${contagem[t]}</div>`)
+        .join('');
+
+      if (limites.length) mapa.fitBounds(limites, { padding: [40, 40], animate: false });
+    }
+
+    carregar(1);
+  </script>
+</body>
+</html>
